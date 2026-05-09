@@ -58,7 +58,7 @@ export const MusicPlayer: React.FC = () => {
     '#a855f7', // Purple
     '#3b82f6', // Blue
     '#06b6d4', // Cyan
-    '#10b8k81', // Emerald
+    '#10b881', // Emerald
     '#f59e0b', // Amber
     '#f43f5e', // Rose
     '#ffffff', // White
@@ -67,6 +67,23 @@ export const MusicPlayer: React.FC = () => {
   const [recommendations, setRecommendations] = useState<RecommendedSong[]>([]);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [listeningHistory, setListeningHistory] = useState<{ title: string, artist: string }[]>([]);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [playlistFilter, setPlaylistFilter] = useState<'all' | 'offline'>('all');
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const filteredPlaylist = playlistFilter === 'offline' 
+    ? playlist.filter(s => s.isDownloaded) 
+    : playlist;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -426,7 +443,7 @@ export const MusicPlayer: React.FC = () => {
 
                 <div className="flex flex-col items-center">
                   <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.8)] animate-pulse mb-2" />
-                  <span className="luxury-text text-[8px] md:text-[9px] text-purple-400 whitespace-nowrap">Velocity Pro Mode</span>
+                  <span className="luxury-text text-[7px] md:text-[8px] text-purple-400 whitespace-nowrap uppercase tracking-[0.15em]">Play Good Sound Good</span>
                 </div>
 
                 <button 
@@ -900,56 +917,90 @@ export const MusicPlayer: React.FC = () => {
                   </div>
                 ) : (
                   <div className="h-full flex flex-col">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-4">
-                         <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/10">
-                          <ListMusic size={18} />
+                    <div className="flex flex-col gap-4 mb-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                           <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/10">
+                            <ListMusic size={18} />
+                          </div>
+                          <h3 className="luxury-text text-[11px] text-white">Collection</h3>
                         </div>
-                        <h3 className="luxury-text text-[11px] text-white">Collection</h3>
+                        <button onClick={() => setShowPlaylist(false)} className="w-10 h-10 hover:bg-white/5 rounded-xl flex items-center justify-center text-white/40">
+                          <X size={20} />
+                        </button>
                       </div>
-                      <button onClick={() => setShowPlaylist(false)} className="w-10 h-10 hover:bg-white/5 rounded-xl flex items-center justify-center text-white/40">
-                        <X size={20} />
-                      </button>
+
+                      <div className="flex items-center gap-2 p-1 bg-white/5 rounded-xl border border-white/5">
+                        <button 
+                          onClick={() => setPlaylistFilter('all')}
+                          className={cn(
+                            "flex-1 py-2 rounded-lg luxury-text text-[8px] transition-all",
+                            playlistFilter === 'all' ? "bg-white text-black font-bold" : "text-white/40 hover:text-white"
+                          )}
+                        >
+                          All Tracks ({playlist.length})
+                        </button>
+                        <button 
+                          onClick={() => setPlaylistFilter('offline')}
+                          className={cn(
+                            "flex-1 py-2 rounded-lg luxury-text text-[8px] transition-all flex items-center justify-center gap-1.5",
+                            playlistFilter === 'offline' ? "bg-emerald-500 text-black font-bold" : "text-white/40 hover:text-white"
+                          )}
+                        >
+                          <Database size={8} />
+                          Offline ({playlist.filter(s => s.isDownloaded).length})
+                        </button>
+                      </div>
+
+                      {!isOnline && (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400">
+                          <VolumeX size={12} />
+                          <span className="text-[8px] luxury-text">Network Offline: Limited to Local Cache</span>
+                        </div>
+                      )}
                     </div>
 
                     <Reorder.Group 
                       axis="y" 
-                      values={playlist} 
+                      values={filteredPlaylist} 
                       onReorder={handleReorder}
                       className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar"
                     >
-                      {playlist.map((song, index) => (
-                        <Reorder.Item 
-                          key={song.id}
-                          value={song}
-                          className={cn(
-                            "group flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border",
-                            currentSongIndex === index 
-                              ? "bg-gradient-to-tr from-purple-500 to-blue-500 text-white border-white/10 shadow-xl" 
-                              : "bg-white/5 border-white/10 active:bg-white/10 text-white/80"
-                          )}
-                          onClick={() => {
-                            setCurrentSongIndex(index);
-                            setIsPlaying(true);
-                            if (window.innerWidth < 768) setShowPlaylist(false);
-                          }}
-                        >
+                      {filteredPlaylist.map((song) => {
+                        const originalIndex = playlist.findIndex(s => s.id === song.id);
+                        return (
+                          <Reorder.Item 
+                            key={song.id}
+                            value={song}
+                            className={cn(
+                              "group flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border",
+                              currentSongIndex === originalIndex 
+                                ? "bg-gradient-to-tr from-purple-500 to-blue-500 text-white border-white/10 shadow-xl" 
+                                : "bg-white/5 border-white/10 active:bg-white/10 text-white/80"
+                            )}
+                            onClick={() => {
+                              if (!isOnline && !song.isDownloaded) return;
+                              setCurrentSongIndex(originalIndex);
+                              setIsPlaying(true);
+                              if (window.innerWidth < 768) setShowPlaylist(false);
+                            }}
+                          >
                           <div className="text-white/20">
                             <GripVertical size={14} />
                           </div>
 
                           <div className={cn(
                             "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all relative",
-                            currentSongIndex === index ? "bg-black/20" : "bg-black/40"
+                            currentSongIndex === originalIndex ? "bg-black/20" : "bg-black/40"
                           )}>
-                            {currentSongIndex === index && isPlaying ? (
+                            {currentSongIndex === originalIndex && isPlaying ? (
                               <div className="flex items-end gap-0.5 h-3">
-                                <motion.div animate={{ height: [4, 12, 4] }} transition={{ repeat: Infinity, duration: 0.5 }} className={cn("w-0.5", currentSongIndex === index ? "bg-white" : "bg-purple-400")} />
-                                <motion.div animate={{ height: [12, 4, 12] }} transition={{ repeat: Infinity, duration: 0.6 }} className={cn("w-0.5", currentSongIndex === index ? "bg-white" : "bg-purple-400")} />
-                                <motion.div animate={{ height: [6, 10, 6] }} transition={{ repeat: Infinity, duration: 0.55 }} className={cn("w-0.5", currentSongIndex === index ? "bg-white" : "bg-purple-400")} />
+                                <motion.div animate={{ height: [4, 12, 4] }} transition={{ repeat: Infinity, duration: 0.5 }} className={cn("w-0.5", currentSongIndex === originalIndex ? "bg-white" : "bg-purple-400")} />
+                                <motion.div animate={{ height: [12, 4, 12] }} transition={{ repeat: Infinity, duration: 0.6 }} className={cn("w-0.5", currentSongIndex === originalIndex ? "bg-white" : "bg-purple-400")} />
+                                <motion.div animate={{ height: [6, 10, 6] }} transition={{ repeat: Infinity, duration: 0.55 }} className={cn("w-0.5", currentSongIndex === originalIndex ? "bg-white" : "bg-purple-400")} />
                               </div>
                             ) : (
-                              <Music size={16} className={currentSongIndex === index ? "text-white" : "text-purple-400"} />
+                              <Music size={16} className={currentSongIndex === originalIndex ? "text-white" : "text-purple-400"} />
                             )}
                             
                             {song.isDownloaded && (
@@ -968,7 +1019,7 @@ export const MusicPlayer: React.FC = () => {
                             </div>
                             <p className={cn(
                               "text-[9px] uppercase font-bold tracking-widest truncate mt-0.5",
-                              currentSongIndex === index ? "text-white/60" : "text-zinc-500"
+                              currentSongIndex === originalIndex ? "text-white/60" : "text-zinc-500"
                             )}>
                               {song.artist}
                             </p>
@@ -1005,14 +1056,15 @@ export const MusicPlayer: React.FC = () => {
                               onClick={(e) => removeSong(song.id, e)}
                               className={cn(
                                 "p-2 rounded-lg transition-all shrink-0",
-                                currentSongIndex === index ? "hover:bg-white/10 text-white" : "text-white/20 hover:text-red-400 hover:bg-red-400/10"
+                                currentSongIndex === originalIndex ? "hover:bg-white/10 text-white" : "text-white/20 hover:text-red-400 hover:bg-red-400/10"
                               )}
                             >
                               <Trash2 size={14} />
                             </button>
                           </div>
                         </Reorder.Item>
-                      ))}
+                        );
+                      })}
                     </Reorder.Group>
 
                     <button 

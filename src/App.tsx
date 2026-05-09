@@ -16,7 +16,7 @@ export default function App() {
             <div className="w-10 h-10 bg-gradient-to-tr from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center text-white shadow-2xl">
               <Headphones size={20} />
             </div>
-            <span className="font-display italic text-xl md:text-2xl font-black tracking-tighter">VELOCITY</span>
+            <span className="font-display italic text-lg md:text-xl font-black tracking-tighter uppercase whitespace-nowrap">Play Good, Sound Good</span>
           </div>
 
           <div className="hidden lg:flex items-center gap-10">
@@ -125,7 +125,7 @@ export default function App() {
       {/* Footer Meta */}
       <footer className="py-12 border-t border-white/10 px-8 md:px-12 mt-20 backdrop-blur-lg bg-white/[0.02]">
         <div className="max-w-7xl mx-auto flex items-center justify-between luxury-text text-[10px] text-zinc-500">
-          <span>&copy; 2026 Velocity Audio</span>
+          <span>&copy; 2026 Play Good, Sound Good Audio</span>
           <div className="flex gap-8">
             <a href="#" className="hover:text-white transition-colors">System Status: Online</a>
             <a href="#" className="hover:text-purple-400 transition-colors">Privacy Architecture</a>

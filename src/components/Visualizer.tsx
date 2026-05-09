@@ -66,10 +66,48 @@ export const Visualizer: React.FC<VisualizerProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Particle system state
+    class Particle {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      size: number;
+      life: number;
+      maxLife: number;
+      color: string;
+
+      constructor(x: number, y: number, color: string) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = -Math.random() * 3 - 1;
+        this.size = Math.random() * 2 + 1;
+        this.maxLife = Math.random() * 30 + 20;
+        this.life = this.maxLife;
+        this.color = color;
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life--;
+      }
+
+      draw(ctx: CanvasRenderingContext2D) {
+        const opacity = this.life / this.maxLife;
+        ctx.fillStyle = `${this.color}${Math.floor(opacity * 255).toString(16).padStart(2, '0')}`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const particles: Particle[] = [];
+
     const render = () => {
       if (!analyserRef.current || !contextRef.current) return;
       
-      // Auto-resume context if it's suspended (browser policy)
       if (contextRef.current.state === 'suspended') {
         contextRef.current.resume();
       }
@@ -83,25 +121,49 @@ export const Visualizer: React.FC<VisualizerProps> = ({
 
       ctx.clearRect(0, 0, width, height);
 
-      const barWidth = (width / (bufferLength * 0.8)); // Zoom into lower/mid frequencies for better visual
+      // Add a subtle glow effect to the background
+      let totalEnergy = 0;
+      for (let i = 0; i < bufferLength; i++) totalEnergy += dataArray[i];
+      const avgEnergy = totalEnergy / bufferLength;
+      
+      const glowOpacity = (avgEnergy / 255) * 0.15;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = color;
+      
+      const barWidth = (width / (bufferLength * 0.8));
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        // Apply sensitivity and scaling
         const barHeight = (dataArray[i] / 255) * height * sensitivity;
         
+        // Spawn particles on frequency spikes
+        if (dataArray[i] > 200 && particles.length < 50 && Math.random() > 0.9) {
+          particles.push(new Particle(x + barWidth / 2, height - barHeight, color));
+        }
+
         const gradient = ctx.createLinearGradient(0, height, 0, height - barHeight);
-        gradient.addColorStop(0, `${color}22`);
+        gradient.addColorStop(0, `${color}11`);
         gradient.addColorStop(1, color);
 
         ctx.fillStyle = gradient;
         
         ctx.beginPath();
-        const r = 3;
+        const r = 2;
         ctx.roundRect(x, height - barHeight, Math.max(1, barWidth - 4), barHeight, [r, r, 0, 0]);
         ctx.fill();
 
         x += barWidth;
+      }
+
+      // Update and draw particles
+      ctx.shadowBlur = 0;
+      for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        if (particles[i].life <= 0) {
+          particles.splice(i, 1);
+        } else {
+          particles[i].draw(ctx);
+        }
       }
 
       animationRef.current = requestAnimationFrame(render);
